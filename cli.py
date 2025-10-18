@@ -6,7 +6,7 @@ A structured booking process CLI for HVAC services using OpenAI.
 
 Author: Qian Sun
 Date: 2025-10-18
-Version: 2.0.0
+Version: 3.0.0
 License: MIT License
 
 Usage:
@@ -123,8 +123,10 @@ def run_prompt_chain(client) -> Optional[Dict[str, Any]]:
 
         try:
             # Step 1: Get conversation guidance strategy
-            guidance_result = get_conversation_guidance(client, current_booking_data, conversation_history)
-            
+            guidance_result = get_conversation_guidance(
+                client, current_booking_data, conversation_history
+            )
+
             if not guidance_result:
                 console.print("[red]Failed to get conversation guidance[/red]")
                 return None
@@ -132,10 +134,14 @@ def run_prompt_chain(client) -> Optional[Dict[str, Any]]:
             # Step 2: Use guidance to interact with user
             if guidance_result.get("recommended_strategy") == "A" and iteration == 1:
                 # Initial greeting and first question
-                console.print(f"\n[bold green]{guidance_result.get('conversation_starter', 'Hi! How can I help you with HVAC services?')}[/bold green]")
+                console.print(
+                    f"\n[bold green]{guidance_result.get('conversation_starter', 'Hi! How can I help you with HVAC services?')}[/bold green]"
+                )
             else:
                 # Follow-up questions
-                console.print(f"\n[bold blue]{guidance_result.get('conversation_starter', 'Could you provide more information?')}[/bold blue]")
+                console.print(
+                    f"\n[bold blue]{guidance_result.get('conversation_starter', 'Could you provide more information?')}[/bold blue]"
+                )
 
             # Get user response
             user_response = Prompt.ask("Your answer")
@@ -174,9 +180,11 @@ def run_prompt_chain(client) -> Optional[Dict[str, Any]]:
     return current_booking_data
 
 
-def get_conversation_guidance(client, current_booking_data: Dict[str, Any], conversation_history: List[str]) -> Optional[Dict[str, Any]]:
+def get_conversation_guidance(
+    client, current_booking_data: Dict[str, Any], conversation_history: List[str]
+) -> Optional[Dict[str, Any]]:
     """Get conversation guidance strategy using the new guidance prompt"""
-    
+
     try:
         # Build context for guidance analysis
         context = f"""
@@ -184,19 +192,19 @@ Current extracted information: {current_booking_data}
 Missing critical information: {get_missing_critical_info(current_booking_data)}
 Conversation stage: {len(conversation_history)} turns
 """
-        
+
         messages = [
             {"role": "system", "content": get_guidance_prompt()},
-            {"role": "user", "content": context}
+            {"role": "user", "content": context},
         ]
-        
+
         response_content = client._chat_completion(messages, temperature=1)
-        
+
         # Parse JSON response
         guidance_result = json.loads(response_content)
-        
+
         return guidance_result
-        
+
     except Exception as e:
         console.print(f"[red]Error getting conversation guidance: {str(e)}[/red]")
         return None
@@ -205,7 +213,7 @@ Conversation stage: {len(conversation_history)} turns
 def get_missing_critical_info(booking_data: Dict[str, Any]) -> List[str]:
     """Determine what critical information is missing"""
     missing = []
-    
+
     # Critical information checklist
     if not booking_data.get("service_type"):
         missing.append("service_type")
@@ -215,7 +223,7 @@ def get_missing_critical_info(booking_data: Dict[str, Any]) -> List[str]:
         missing.append("contact_name")
     if not booking_data.get("contact_phone"):
         missing.append("contact_phone")
-    
+
     return missing
 
 
@@ -238,7 +246,6 @@ def extract_booking_information(
 
         response_content = client._chat_completion(messages, temperature=0.1)
 
-
         response_data = json.loads(response_content)
 
         # Extract booking data from response
@@ -254,59 +261,6 @@ def extract_booking_information(
 
     except Exception as e:
         console.print(f"[red]Error extracting information: {str(e)}[/red]")
-        return None
-
-
-def validate_booking_information(
-    client, booking_data: Dict[str, Any]
-) -> Dict[str, Any]:
-    """Validate booking information against schema requirements"""
-
-    try:
-        # Create a summary of current booking data
-        booking_summary = f"Current booking information: {booking_data}"
-
-        messages = [
-            {"role": "system", "content": get_validation_prompt()},
-            {"role": "user", "content": booking_summary},
-        ]
-
-        response_content = client._chat_completion(messages, temperature=0.1)
-
-
-        validation_result = json.loads(response_content)
-
-        return validation_result
-
-    except Exception as e:
-        console.print(f"[red]Error validating information: {str(e)}[/red]")
-        return {"is_complete": False, "missing_fields": [], "questions": []}
-
-
-def generate_followup_question(
-    client, booking_data: Dict[str, Any], validation_result: Dict[str, Any]
-) -> Optional[str]:
-    """Generate a follow-up question based on missing information"""
-
-    try:
-        # Create context for follow-up question generation
-        context = f"""
-Current booking data: {booking_data}
-Missing fields: {validation_result.get("missing_fields", [])}
-Previous questions: {validation_result.get("questions", [])}
-"""
-
-        messages = [
-            {"role": "system", "content": get_followup_prompt()},
-            {"role": "user", "content": context},
-        ]
-
-        followup_question = client._chat_completion(messages, temperature=1)
-
-        return followup_question.strip()
-
-    except Exception as e:
-        console.print(f"[red]Error generating follow-up question: {str(e)}[/red]")
         return None
 
 
