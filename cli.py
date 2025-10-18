@@ -5,8 +5,8 @@ HVAC Booking Agent CLI
 A structured booking process CLI for HVAC services using OpenAI.
 
 Author: Qian Sun
-Date: 2025-10-17
-Version: 1.0.0
+Date: 2025-10-18
+Version: 2.0.0
 License: MIT License
 
 Usage:
@@ -36,9 +36,8 @@ from rich.panel import Panel
 from rich.prompt import Prompt, Confirm
 
 from agent.llm_client import create_llm_client
-from agent.schema import AgentOutput
 from agent.prompt import (
-    get_llm_system_prompt,
+    get_guidance_prompt,
     get_extraction_prompt,
     get_validation_prompt,
     get_followup_prompt,
@@ -96,8 +95,8 @@ def start_booking_process(api_key: str, model: str, verbose: bool):
 
         # Confirm information
         if confirm_booking_information(booking_data):
-            # Generate booking summary
-            generate_booking_summary(client, booking_data)
+            # Save booking record directly
+            save_booking_record_simple(booking_data)
         else:
             console.print("[yellow]Booking cancelled[/yellow]")
 
@@ -111,15 +110,9 @@ def run_prompt_chain(client) -> Optional[Dict[str, Any]]:
     console.print("\n[bold cyan]Let's start with your HVAC service request[/bold cyan]")
     console.print("=" * 50)
 
-    # Step 1: Get initial user request
-    user_request = Prompt.ask(
-        "\n[bold blue]Please tell me what HVAC service you need[/bold blue]"
-    )
-
-    # Initialize conversation history
-    conversation_history = [user_request]
+    # Initialize conversation state
+    conversation_history = []
     current_booking_data = {}
-
     max_iterations = 10  # Prevent infinite loops
     iteration = 0
 
@@ -129,7 +122,32 @@ def run_prompt_chain(client) -> Optional[Dict[str, Any]]:
         console.print(f"\n[dim]Processing your request... (Step {iteration})[/dim]")
 
         try:
-            # Step 2: Extract information from current conversation
+            # Step 1: Get conversation guidance strategy
+            guidance_result = get_conversation_guidance(client, current_booking_data, conversation_history)
+            
+            if not guidance_result:
+                console.print("[red]Failed to get conversation guidance[/red]")
+                return None
+
+            # Step 2: Use guidance to interact with user
+            if guidance_result.get("recommended_strategy") == "A" and iteration == 1:
+                # Initial greeting and first question
+                console.print(f"\n[bold green]{guidance_result.get('conversation_starter', 'Hi! How can I help you with HVAC services?')}[/bold green]")
+            else:
+                # Follow-up questions
+                console.print(f"\n[bold blue]{guidance_result.get('conversation_starter', 'Could you provide more information?')}[/bold blue]")
+
+            # Get user response
+            user_response = Prompt.ask("Your answer")
+
+            if user_response.lower() in ["quit", "exit", "cancel"]:
+                console.print("[yellow]Booking cancelled by user[/yellow]")
+                return None
+
+            # Add to conversation history
+            conversation_history.append(user_response)
+
+            # Step 3: Extract information from current conversation
             extracted_data = extract_booking_information(client, conversation_history)
 
             if not extracted_data:
@@ -139,34 +157,10 @@ def run_prompt_chain(client) -> Optional[Dict[str, Any]]:
             # Update current booking data with extracted information
             current_booking_data.update(extracted_data)
 
-            # Step 3: Validate against schema and check completeness
-            validation_result = validate_booking_information(
-                client, current_booking_data
-            )
-
-            if validation_result.get("is_complete", False):
+            # Step 4: Check if we have enough information
+            if guidance_result.get("recommended_strategy") == "D":
                 console.print("[green]✅ All required information collected![/green]")
                 break
-
-            # Step 4: Generate follow-up question
-            followup_question = generate_followup_question(
-                client, current_booking_data, validation_result
-            )
-
-            if not followup_question:
-                console.print("[yellow]Unable to generate follow-up question[/yellow]")
-                break
-
-            # Ask the follow-up question
-            console.print(f"\n[bold blue]Question:[/bold blue] {followup_question}")
-            user_response = Prompt.ask("Your answer")
-
-            if user_response.lower() in ["quit", "exit", "cancel"]:
-                console.print("[yellow]Booking cancelled by user[/yellow]")
-                return None
-
-            # Add to conversation history
-            conversation_history.append(f"Q: {followup_question}\nA: {user_response}")
 
         except Exception as e:
             console.print(f"[red]Error in prompt chain: {str(e)}[/red]")
@@ -178,6 +172,51 @@ def run_prompt_chain(client) -> Optional[Dict[str, Any]]:
         )
 
     return current_booking_data
+
+
+def get_conversation_guidance(client, current_booking_data: Dict[str, Any], conversation_history: List[str]) -> Optional[Dict[str, Any]]:
+    """Get conversation guidance strategy using the new guidance prompt"""
+    
+    try:
+        # Build context for guidance analysis
+        context = f"""
+Current extracted information: {current_booking_data}
+Missing critical information: {get_missing_critical_info(current_booking_data)}
+Conversation stage: {len(conversation_history)} turns
+"""
+        
+        messages = [
+            {"role": "system", "content": get_guidance_prompt()},
+            {"role": "user", "content": context}
+        ]
+        
+        response_content = client._chat_completion(messages, temperature=1)
+        
+        # Parse JSON response
+        guidance_result = json.loads(response_content)
+        
+        return guidance_result
+        
+    except Exception as e:
+        console.print(f"[red]Error getting conversation guidance: {str(e)}[/red]")
+        return None
+
+
+def get_missing_critical_info(booking_data: Dict[str, Any]) -> List[str]:
+    """Determine what critical information is missing"""
+    missing = []
+    
+    # Critical information checklist
+    if not booking_data.get("service_type"):
+        missing.append("service_type")
+    if not booking_data.get("problem_summary"):
+        missing.append("problem_summary")
+    if not booking_data.get("contact_name"):
+        missing.append("contact_name")
+    if not booking_data.get("contact_phone"):
+        missing.append("contact_phone")
+    
+    return missing
 
 
 def extract_booking_information(
@@ -199,8 +238,6 @@ def extract_booking_information(
 
         response_content = client._chat_completion(messages, temperature=0.1)
 
-        # Parse JSON response
-        import json
 
         response_data = json.loads(response_content)
 
@@ -236,8 +273,6 @@ def validate_booking_information(
 
         response_content = client._chat_completion(messages, temperature=0.1)
 
-        # Parse JSON response
-        import json
 
         validation_result = json.loads(response_content)
 
@@ -266,7 +301,7 @@ Previous questions: {validation_result.get("questions", [])}
             {"role": "user", "content": context},
         ]
 
-        followup_question = client._chat_completion(messages, temperature=0.3)
+        followup_question = client._chat_completion(messages, temperature=1)
 
         return followup_question.strip()
 
@@ -389,143 +424,13 @@ def confirm_booking_information(booking_data: Dict) -> bool:
     return Confirm.ask("\nPlease confirm if the above information is correct?")
 
 
-def generate_booking_summary(client, booking_data: Dict):
-    """Generate booking summary"""
-
-    console.print("\n[bold cyan]Generating booking summary[/bold cyan]")
+def save_booking_record_simple(booking_data: Dict):
+    """Save booking record with original data only"""
 
     try:
-        # Build conversation content
-        conversation_turns = []
-
-        # Add service type and problem description
-        service_type_map = {
-            "ac_repair": "AC Repair",
-            "furnace_maintenance": "Furnace Maintenance",
-            "installation": "Equipment Installation",
-            "cleaning": "Cleaning Service",
-            "ventilation_maintenance": "Ventilation System Maintenance",
-            "other": "Other Service",
-        }
-
-        service_type = service_type_map.get(
-            booking_data.get("service_type", ""), "Unknown Service"
-        )
-        problem_desc = booking_data.get("problem_description", "")
-
-        conversation_turns.append(
-            f"I need {service_type} service. Problem description: {problem_desc}"
-        )
-
-        # Add address information
-        address_parts = []
-        if booking_data.get("address"):
-            address_parts.append(booking_data["address"])
-        if booking_data.get("city"):
-            address_parts.append(booking_data["city"])
-        if booking_data.get("province"):
-            address_parts.append(booking_data["province"])
-
-        if address_parts:
-            conversation_turns.append(f"Address: {', '.join(address_parts)}")
-
-        # Add time preference
-        if booking_data.get("time_preference"):
-            conversation_turns.append(
-                f"Preferred service time: {booking_data['time_preference']}"
-            )
-
-        # Add contact information
-        if booking_data.get("contact_name"):
-            conversation_turns.append(f"Contact person: {booking_data['contact_name']}")
-        if booking_data.get("contact_phone"):
-            conversation_turns.append(f"Contact phone: {booking_data['contact_phone']}")
-
-        # Add other information
-        if booking_data.get("access_notes"):
-            conversation_turns.append(
-                f"Access instructions: {booking_data['access_notes']}"
-            )
-        if booking_data.get("constraints"):
-            conversation_turns.append(
-                f"Special requirements: {booking_data['constraints']}"
-            )
-
-        # Process with LLM using structured prompt
-        with console.status("[bold green]Processing booking information..."):
-            result = client.process_conversation(
-                conversation_turns=conversation_turns,
-                system_prompt=get_llm_system_prompt(),
-            )
-
-        # Display booking summary
-        display_booking_summary(result)
-
-        # Save booking record
-        save_booking_record(booking_data, result)
-
-    except Exception as e:
-        console.print(f"[red]Failed to generate summary: {str(e)}[/red]")
-
-
-def display_booking_summary(result: AgentOutput):
-    """Display booking summary"""
-
-    console.print(
-        "\n[bold green]✅ Booking summary generated successfully[/bold green]"
-    )
-
-    # Create summary panel
-    summary_panel = Panel(result.summary, title="Booking Summary", border_style="green")
-    console.print(summary_panel)
-
-    # Create detailed information table
-    table = Table(title="Detailed Booking Information")
-    table.add_column("Item", style="cyan")
-    table.add_column("Information", style="green")
-
-    booking = result.booking
-
-    table.add_row("Service Type", booking.service_type or "Not specified")
-    table.add_row("Equipment Brand", booking.equipment_brand or "Not specified")
-    table.add_row("Problem Summary", booking.problem_summary or "Not specified")
-    table.add_row("Severity Level", booking.severity or "Not specified")
-    table.add_row("Property Type", booking.property_type or "Not specified")
-    table.add_row("Address", booking.address or "Not specified")
-    table.add_row("City", booking.city or "Not specified")
-    table.add_row("Province", booking.province or "Not specified")
-    table.add_row(
-        "Time Preference",
-        (
-            ", ".join(booking.preferred_timeslots)
-            if booking.preferred_timeslots
-            else "Not specified"
-        ),
-    )
-    table.add_row("Contact Name", booking.contact_name or "Not specified")
-    table.add_row("Phone", booking.contact_phone or "Not specified")
-    table.add_row("Email", booking.contact_email or "Not specified")
-    table.add_row(
-        "Constraints", ", ".join(booking.constraints) if booking.constraints else "None"
-    )
-    table.add_row("Confidence", f"{booking.confidence:.2f}")
-
-    console.print(table)
-
-    console.print("\n[bold blue]Booking process completed![/bold blue]")
-    console.print(
-        "Our customer service team will contact you within 24 hours to confirm specific arrangements."
-    )
-
-
-def save_booking_record(booking_data: Dict, result: AgentOutput):
-    """Save booking record"""
-
-    try:
-        # Build complete record using original booking_data and AI summary
+        # Build record using only original booking_data
         record = {
-            "booking_data": booking_data,  # Collected data
-            "ai_summary": result.summary,  # AI-generated summary text
+            "booking_data": booking_data,  # Original collected data
             "timestamp": datetime.now(timezone.utc).isoformat(),
         }
 
@@ -535,6 +440,10 @@ def save_booking_record(booking_data: Dict, result: AgentOutput):
             f.write(json.dumps(record, ensure_ascii=False) + "\n")
 
         console.print(f"[dim]Booking record saved to {filename}[/dim]")
+        console.print("\n[bold blue]Booking process completed![/bold blue]")
+        console.print(
+            "Our customer service team will contact you within 24 hours to confirm specific arrangements."
+        )
 
     except Exception as e:
         console.print(f"[yellow]Failed to save record: {str(e)}[/yellow]")

@@ -4,8 +4,8 @@ HVAC Booking Agent - Data Schema
 Pydantic data models for HVAC booking information.
 
 Author: Qian Sun
-Date: 2025-10-17
-Version: 1.0.0
+Date: 2025-10-18
+Version: 2.0.0
 License: MIT License
 
 Copyright (c) 2025 Qian Sun. Licensed under the MIT License.

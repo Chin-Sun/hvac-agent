@@ -10,7 +10,7 @@ __pycache__/
 *.swp
 *.swo
 *~
-
+README.md
 # macOS
 .DS_Store
 .AppleDouble
@@ -19,6 +19,7 @@ __pycache__/
 # Generated data files
 booking_records.jsonl
 *.jsonl.backup
+agent/booking_records_1.jsonl
 
 # OS generated files
 .DS_Store?
