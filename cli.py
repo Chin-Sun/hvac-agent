@@ -39,8 +39,6 @@ from agent.llm_client import create_llm_client
 from agent.prompt import (
     get_guidance_prompt,
     get_extraction_prompt,
-    get_validation_prompt,
-    get_followup_prompt,
 )
 
 # Initialize Rich console
@@ -149,6 +147,21 @@ def run_prompt_chain(client) -> Optional[Dict[str, Any]]:
             if user_response.lower() in ["quit", "exit", "cancel"]:
                 console.print("[yellow]Booking cancelled by user[/yellow]")
                 return None
+            elif user_response.lower() in ["skip", "no", "n/a", ""]:
+                # User wants to skip optional questions
+                console.print("[dim]Skipping optional information...[/dim]")
+                # Add skip response to conversation history so LLM knows user skipped
+                conversation_history.append(f"User skipped: {user_response}")
+                
+                # Mark the current missing optional field as skipped
+                optional_missing = get_missing_optional_info(current_booking_data)
+                if optional_missing:
+                    # Mark the first missing optional field as skipped
+                    skipped_field = optional_missing[0]
+                    current_booking_data[f"{skipped_field}_skipped"] = True
+                
+                # Continue to next iteration
+                continue
 
             # Add to conversation history
             conversation_history.append(user_response)
@@ -164,7 +177,11 @@ def run_prompt_chain(client) -> Optional[Dict[str, Any]]:
             current_booking_data.update(extracted_data)
 
             # Step 4: Check if we have enough information
-            if guidance_result.get("recommended_strategy") == "D":
+            # Use both LLM strategy and our own completion check
+            if guidance_result.get("recommended_strategy") == "F":
+                console.print("[green]✅ All required information collected![/green]")
+                break
+            elif is_booking_complete(current_booking_data) and not should_ask_optional_info(current_booking_data, iteration, conversation_history):
                 console.print("[green]✅ All required information collected![/green]")
                 break
 
@@ -190,6 +207,7 @@ def get_conversation_guidance(
         context = f"""
 Current extracted information: {current_booking_data}
 Missing critical information: {get_missing_critical_info(current_booking_data)}
+Missing optional information: {get_missing_optional_info(current_booking_data)}
 Conversation stage: {len(conversation_history)} turns
 """
 
@@ -214,7 +232,7 @@ def get_missing_critical_info(booking_data: Dict[str, Any]) -> List[str]:
     """Determine what critical information is missing"""
     missing = []
 
-    # Critical information checklist
+    # CRITICAL priority information (required for booking)
     if not booking_data.get("service_type"):
         missing.append("service_type")
     if not booking_data.get("problem_summary"):
@@ -223,8 +241,76 @@ def get_missing_critical_info(booking_data: Dict[str, Any]) -> List[str]:
         missing.append("contact_name")
     if not booking_data.get("contact_phone"):
         missing.append("contact_phone")
+    
+    # HIGH priority information (required for scheduling)
+    if not booking_data.get("property_type"):
+        missing.append("property_type")
+    if not booking_data.get("address"):
+        missing.append("address")
+    if not booking_data.get("city"):
+        missing.append("city")
+    if not booking_data.get("province"):
+        missing.append("province")
 
     return missing
+
+
+def get_missing_optional_info(booking_data: Dict[str, Any]) -> List[str]:
+    """Determine what optional information is missing"""
+    missing = []
+    
+    # MEDIUM priority information (preferred but not strictly required)
+    if not booking_data.get("preferred_timeslots") and not booking_data.get("preferred_timeslots_skipped"):
+        missing.append("preferred_timeslots")
+    if not booking_data.get("severity") and not booking_data.get("severity_skipped"):
+        missing.append("severity")
+    
+    # LOW priority information (optional)
+    if not booking_data.get("equipment_brand") and not booking_data.get("equipment_brand_skipped"):
+        missing.append("equipment_brand")
+    if not booking_data.get("access_notes") and not booking_data.get("access_notes_skipped"):
+        missing.append("access_notes")
+    if not booking_data.get("constraints") and not booking_data.get("constraints_skipped"):
+        missing.append("constraints")
+    
+    return missing
+
+
+def is_booking_complete(booking_data: Dict[str, Any]) -> bool:
+    """Check if we have all required information for booking"""
+    critical_missing = get_missing_critical_info(booking_data)
+    
+    # If no critical info is missing, consider booking complete
+    # Optional fields (equipment_brand, access_notes, constraints) are not required
+    return len(critical_missing) == 0
+
+
+def should_ask_optional_info(booking_data: Dict[str, Any], iteration: int, conversation_history: List[str] = None) -> bool:
+    """Determine if we should ask for optional information"""
+    # Only ask for optional info if we have all critical info
+    if not is_booking_complete(booking_data):
+        return False
+    
+    # Check if we have MEDIUM priority info (preferred_timeslots or severity)
+    has_medium_info = booking_data.get("preferred_timeslots") or booking_data.get("severity")
+    
+    # If we don't have MEDIUM info yet, continue asking
+    if not has_medium_info:
+        return True
+    
+    # If we have MEDIUM info, check if we should ask for LOW priority info
+    optional_missing = get_missing_optional_info(booking_data)
+    low_priority_missing = [item for item in optional_missing if item in ["equipment_brand", "access_notes", "constraints"]]
+    
+    # Check if user has already skipped these questions
+    if conversation_history:
+        recent_skips = [turn for turn in conversation_history[-3:] if "User skipped" in turn]
+        # If user has skipped multiple times recently, don't keep asking
+        if len(recent_skips) >= 2:
+            return False
+    
+    # Give 2-3 chances for LOW priority info after MEDIUM is complete
+    return len(low_priority_missing) > 0 and iteration <= 8
 
 
 def extract_booking_information(
@@ -290,13 +376,13 @@ def confirm_booking_information(booking_data: Dict) -> bool:
     )
 
     # Add problem description
-    if booking_data.get("problem_description"):
+    if booking_data.get("problem_summary"):
         table.add_row(
             "Problem Description",
             (
-                booking_data["problem_description"][:50] + "..."
-                if len(booking_data["problem_description"]) > 50
-                else booking_data["problem_description"]
+                booking_data["problem_summary"][:50] + "..."
+                if len(booking_data["problem_summary"]) > 50
+                else booking_data["problem_summary"]
             ),
         )
 
@@ -347,8 +433,17 @@ def confirm_booking_information(booking_data: Dict) -> bool:
         table.add_row("Email", booking_data["contact_email"])
 
     # Add time preference
-    if booking_data.get("time_preference"):
-        table.add_row("Time Preference", booking_data["time_preference"])
+    if booking_data.get("preferred_timeslots"):
+        time_slots = booking_data["preferred_timeslots"]
+        if isinstance(time_slots, list):
+            time_display = ", ".join(time_slots)
+        else:
+            time_display = str(time_slots)
+        table.add_row("Time Preference", time_display)
+
+    # Add equipment brand
+    if booking_data.get("equipment_brand"):
+        table.add_row("Equipment Brand", booking_data["equipment_brand"])
 
     # Add access notes
     if booking_data.get("access_notes"):
@@ -363,12 +458,18 @@ def confirm_booking_information(booking_data: Dict) -> bool:
 
     # Add special requirements
     if booking_data.get("constraints"):
+        constraints = booking_data["constraints"]
+        if isinstance(constraints, list):
+            constraints_display = ", ".join(constraints)
+        else:
+            constraints_display = str(constraints)
+        
         table.add_row(
             "Special Requirements",
             (
-                booking_data["constraints"][:50] + "..."
-                if len(booking_data["constraints"]) > 50
-                else booking_data["constraints"]
+                constraints_display[:50] + "..."
+                if len(constraints_display) > 50
+                else constraints_display
             ),
         )
 

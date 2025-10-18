@@ -1,16 +1,29 @@
-{"id":"case_01","turns":["Hi, my apartment AC isn’t cooling, I live in downtown Toronto.","Is anyone available this weekend? Preferably Saturday afternoon.","Address is 123 King St W, Toronto. I think the brand is LG.","That’s all, please help me book. /done"]}
-{"id":"case_02","turns":["Last night the furnace had a burning smell with some smoke, I’m quite worried about safety. We’re in Scarborough.","Can someone come as soon as possible? Preferably tonight or tomorrow morning.","Address: 55 Meadowvale Rd, Scarborough. Contact person is Li. /done"]}
-{"id":"case_03","turns":["I’d like to book an appointment for a new AC installation in my detached house in Mississauga.","I haven’t decided the brand yet, can you come first for inspection and quote?","Either Wednesday or Thursday afternoon works. /done"]}
-{"id":"case_04","turns":["I live in an Ottawa condo and would like to schedule annual furnace maintenance.","Address is 200 Elgin St. Someone is available Friday morning. /done"]}
-{"id":"case_05","turns":["Our office ventilation has a strange smell; HVAC needs an inspection. We’re in Toronto’s financial district.","It’s a commercial building; technicians must register at the front desk.","Please schedule Tuesday between 10am and 12pm if possible. /done"]}
-{"id":"case_06","turns":["Outdoor AC unit is very noisy and sometimes trips the breaker, I’m in Markham.","We have a dog, please call before coming.","Weekend mornings are fine. /done"]}
-{"id":"case_07","turns":["I rent an apartment; my landlord asked me to arrange duct cleaning myself. It’s in North York.","I only have a rough location: near Yonge & Sheppard. Can I still book first?","Next Monday or Tuesday after 3pm works. /done"]}
-{"id":"case_08","turns":["It’s very hot recently, and my AC completely stopped working. There’s an elderly person at home who can’t sleep, please make it urgent. I’m in Mississauga.","Address: 789 Lakeshore Rd, Mississauga. Tonight or tomorrow morning both fine. /done"]}
-{"id":"case_09","turns":["I want to replace both my old furnace and AC unit in my townhouse in Waterloo.","There’s limited parking, please bring a short vehicle.","This weekend any time works. /done"]}
-{"id":"case_10","turns":["Just wondering how much it costs to clean a condo AC in Toronto.","Not sure if I’ll book yet, depends on price. /done"]}
-{"id":"case_11","turns":["There is a strong gas smell in my apartment, and the alarm is beeping. I'm in North York.","Address is 12 Finch Ave E, North York. Can someone come immediately? /done"]}
-{"id":"case_12","turns":["I live in a downtown condo. For AC maintenance, technicians need a key card and must register at the front desk.","Someone is available Saturday morning at 350 Bay St, Toronto. /done"]}
-{"id":"case_13","turns":["Planning to install a new AC in my Mississauga condo, but the building elevator is out of order.","If stairs are needed, please send two people. Wednesday 1-3pm works. /done"]}
-{"id":"case_14","turns":["I’d like to compare the price between duct cleaning and evaporator coil cleaning, condo in Scarborough.","Just checking prices, not booking yet. /done"]}
-{"id":"case_15","turns":["Office in Markham has a bad smell at night. Need inspection after hours.","Requires security gate code to enter, better after 8pm. Address: 100 Enterprise Blvd, Markham. /done"]}
-{"id":"case_16","turns":["Townhouse in Waterloo, furnace stopped working last night, house is cold and I have two kids.","Can you come early tomorrow morning? /done"]}
+{"id":"case_01","turns":["Hi, my apartment AC isn’t cooling, I live in downtown Toronto.","Is anyone available this weekend? Preferably Saturday afternoon.","Address is 123 King St W, Toronto, ON.","The brand is LG.","My name is Emily Chen, phone number is 416-555-1043.","Anytime Saturday afternoon works for me. /done"]}
+
+{"id":"case_02","turns":["Last night the furnace had a burning smell and a bit of smoke, I’m really worried about safety. We’re in Scarborough.","Can someone come as soon as possible? Preferably tonight or tomorrow morning.","Address is 55 Meadowvale Rd, Scarborough, ON.","Contact person is Li Zhang, phone 647-555-2088.","Anytime tonight or early tomorrow is fine. /done"]}
+
+{"id":"case_03","turns":["I’d like to book a new AC installation for my detached house in Mississauga.","I haven’t decided the brand yet; can someone come first for inspection and quote?","Address: 27 Hazelwood Dr, Mississauga, ON.","My name is David Liu, phone 905-555-3179.","Either Wednesday or Thursday afternoon works. /done"]}
+
+{"id":"case_04","turns":["I live in a condo in Ottawa and want to schedule annual furnace maintenance.","Address is 200 Elgin St, Ottawa, ON.","My name is Sarah Thompson, phone 613-555-4126.","Friday morning anytime is perfect. /done"]}
+
+{"id":"case_05","turns":["Our office ventilation has a strange smell; HVAC needs inspection. It’s in Toronto’s financial district.","Technicians must register at the front desk before entering.","Address: 120 Bay St, Suite 2500, Toronto, ON.","Contact name: Jason Wright, phone 416-555-5270.","Tuesday between 10am and 12pm works best. /done"]}
+
+{"id":"case_06","turns":["The outdoor AC unit is very noisy and sometimes trips the breaker, located in Markham.","We have a dog, so please call before coming.","Address: 45 Kennedy Rd, Markham, ON.","Contact: Alice Wong, phone 905-555-6345.","Weekend mornings are fine for the visit. /done"]}
+
+{"id":"case_07","turns":["I rent an apartment in North York, and my landlord asked me to arrange duct cleaning.","The location is near Yonge and Sheppard.","Address: 8 Hillcrest Ave, North York, ON.","Contact: Michael Park, phone 647-555-7420.","Next Monday or Tuesday after 3pm works for me. /done"]}
+
+{"id":"case_08","turns":["It’s been extremely hot, and my AC completely stopped working. There’s an elderly person at home, so please make it urgent.","Address: 789 Lakeshore Rd, Mississauga, ON.","Contact name: Linda Chen, phone 905-555-8562.","Tonight or tomorrow morning both work. /done"]}
+
+{"id":"case_09","turns":["I want to replace both my old furnace and AC unit in my townhouse in Waterloo.","There’s limited parking, so please bring a short vehicle.","Address: 220 Erb St W, Waterloo, ON.","Contact: Kevin Brown, phone 519-555-9341.","This weekend anytime is fine. /done"]}
+
+{"id":"case_10","turns":["Just wondering how much it costs to clean a condo AC in Toronto.","Address: 77 Adelaide St W, Toronto, ON.","Contact: Rachel Kim, phone 416-555-1037.","Not sure if I’ll book yet—it depends on the price. Any weekday afternoon is fine if needed. /done"]}
+
+{"id":"case_11","turns":["There’s a strong gas smell in my apartment and the alarm is beeping—I’m in North York.","Address: 12 Finch Ave E, North York, ON.","Please send someone immediately.","My name is Alex Zhao, phone 416-555-1142.","Anytime today, as soon as possible. /done"]}
+
+{"id":"case_12","turns":["I live in a downtown condo; for AC maintenance technicians need a key card and must register at the front desk.","Address: 350 Bay St, Toronto, ON.","Contact: Jessica Lee, phone 416-555-2258.","Saturday morning anytime works. /done"]}
+
+{"id":"case_13","turns":["Planning to install a new AC in my Mississauga condo, but the building elevator is out of order.","If stairs are needed, please send two people.","Address: 4010 Confederation Pkwy, Mississauga, ON.","Contact name: Brian Patel, phone 905-555-3314.","Wednesday 1-3 PM works. /done"]}
+
+{"id":"case_14","turns":["Our office in Markham has a bad smell at night and needs an after-hours inspection.","It requires a security gate code to enter, better after 8 PM.","Address: 100 Enterprise Blvd, Markham, ON.","Contact: Olivia Chen, phone 905-555-4459.","Any night after 8 PM works. /done"]}
+
+{"id":"case_15","turns":["My townhouse in Waterloo has a furnace that stopped working last night; it’s very cold and I have two kids.","Address: 18 Columbia St E, Waterloo, ON.","Contact: Daniel Moore, phone 519-555-5523.","Please come early tomorrow morning, any time works. /done"]}
