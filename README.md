@@ -4,7 +4,9 @@ An intelligent conversational agent for HVAC service booking that guides users t
 
 ## 1. Sample Conversations
 
-The following 15 test cases represent diverse customer scenarios used to evaluate agent performance throughout the development process:
+Below are 15 test cases with different customer situations. These cases were used to test how well the agent works.
+
+**Important:** When testing, send one message at a time (not the whole conversation at once). Use the text inside the quotation marks " " as your answers.
 
 
 ```json
@@ -40,13 +42,18 @@ The following 15 test cases represent diverse customer scenarios used to evaluat
 ```
 
 ## 2. Initial Prompt and Design Strategy
-Based on prompt engineering best practices, I decided to **break down the complex task into smaller, manageable steps**. The system follows a **prompt chaining** approach with three core layers:
+I broke down this complex task into three simple steps:
 
 **Extraction → Validation → Follow-up**
 
-Here's how it works: first, extract information from user input, then compare it against the required fields in `schema.py` to identify what's missing, and finally ask users for any critical information they haven't provided yet. This process repeats until we have everything we need.
+Here's how it works:
+1. **Extract** - Pull out information from what the user says
+2. **Validate** - Check what's missing by comparing with required fields in `agent/schema.py`
+3. **Follow-up** - Ask for any important information they didn't give us yet
 
-To keep things **clear and structured**, I included specific examples in each function so the LLM knows exactly what output format to produce. Each function has explicit "extract" instructions and uses concise, **descriptive** text for required fields. The goal is to guide the LLM through a natural conversation flow while systematically collecting all necessary booking information.
+This cycle repeats until we have all the information we need.
+
+To keep things organized, I added clear examples in each function so the AI knows exactly what format to use. Each function has simple "extract" instructions and short descriptions for each required field. The goal is to make the AI have a natural conversation while collecting all the booking information step by step.
 
 
 ```python
@@ -174,79 +181,82 @@ Return only the question text, no additional formatting."""
 
 **What needs improvement:**
 
-The system relies too heavily on users providing complete information upfront. When someone just says "my air conditioner is broken", it doesn't proactively ask for the essentials like name, address, or contact info. Another issue is the questioning order - the LLM seems to randomly pick which field to ask about next, which makes the conversation feel disjointed. The tone is also pretty formal and could be warmer and more conversational.
+- The system waits for users to give all the information at once. When someone just says "my air conditioner is broken", it doesn't automatically ask for basic info like their name, address, or phone number.
+- The agent asks questions in random order, which makes the conversation feel awkward and confusing.
+- The tone sounds too formal - it should be friendlier and more casual.
 
 **What's working well:**
 
-The agent does a solid job extracting key information from user messages - it catches service types, problem descriptions, contact details, and other booking essentials. It also handles multi-turn conversations well, remembering context and following up persistently when information is missing. I'm particularly happy with how it validates data formats (phone numbers, emails) and prompts users to correct them when needed. The structured JSON output is clean and consistent, which makes integration straightforward.
+- The agent is good at finding key information in user messages - it picks up service types, problem descriptions, contact details, and other important booking info.
+- It handles back-and-forth conversations well, remembers what was said, and keeps asking when information is missing. I really like how it checks if phone numbers and emails are in the right format and asks users to fix them. The JSON output is clean and easy to work with.
 
 ## 4. Iteration 2: Adding Conversation Guidance
 ### Prompt Refinement and Rationale
 
-The main problem was that the system lacked a "conversation management layer" - it was just mechanically extracting info, finding gaps, and asking questions without considering the order or timing. So I added a conversation guidance strategy prompt at the beginning of the process.
+The main problem was that the system didn't know how to manage conversations well - it just pulled out information, found missing parts, and asked questions without thinking about the right order or timing. So I added a conversation guide at the beginning to help it.
 
-**Priority-based information collection:**
+**Setting priorities for information:**
 
-I split the required information into four priority levels: CRITICAL → HIGH → MEDIUM → LOW. This way, the LLM won't randomly ask for things in whatever order they appear in the conversation. Without explicit prioritization, you could end up asking for contact details at the very end, which feels weird.
+I split the information into four priority levels: CRITICAL → HIGH → MEDIUM → LOW. This way, the AI won't randomly ask for things. Without clear priorities, you might end up asking for contact details at the very end, which feels strange.
 
-**Strategy-based approach:**
+**Creating different strategies:**
 
-I created four different conversation strategies, each with:
-- Trigger conditions (when to use this strategy)
-- Behavior guidance (what to do)
-- Examples (to reduce hallucination)
+I created four different conversation strategies. Each one includes:
+- When to use it (the right situation)
+- What to do (specific actions)
+- Examples (to help the AI understand better)
 
-The idea is that conversations naturally have different stages, and the agent should adapt its approach accordingly.
+The idea is that conversations go through different stages, so the agent should change how it talks based on the stage.
 
-**Dynamic context injection:**
+**Using real-time information:**
 
-Instead of hardcoded examples, I pass in the actual current state through variables like `{current_booking_info}`, `{missing_critical_info}`, and `{conversation_stage}`. This lets the LLM make decisions based on what's actually happening in each unique conversation.
+Instead of using fixed examples, I feed in the actual current situation using variables like `{current_booking_info}`, `{missing_critical_info}`, and `{conversation_stage}`. This lets the AI make decisions based on what's really happening in each conversation.
 
-The architecture now has four layers: **guidance → extraction → validation → follow-up**
+The system now has four steps: **guidance → extraction → validation → follow-up**
 
 ## 5. Iteration 3: Single Responsibility Architecture
 ### Agent Analysis
 
-After testing the guidance prompt, I ran into a frustrating issue. The three-layer structure (extraction → validation → follow_up) would sometimes get stuck in a loop on certain questions. For instance, if the user didn't provide "equipment brand", the agent would keep asking "What brand is your AC?" over and over. Even when users clearly didn't know or didn't want to answer, the conversation just couldn't move forward.
+After testing, I found a frustrating problem. The three-step system (extraction → validation → follow_up) would sometimes get stuck repeating the same question. For example, if the user didn't provide "equipment brand", the agent would keep asking "What brand is your AC?" over and over. Even when users clearly didn't know or didn't want to answer, the conversation couldn't move forward.
 
-On the positive side, the guidance prompt did make the agent noticeably more friendly and better at leading users through the conversation.
+On the bright side, the guidance prompt did make the agent much friendlier and better at leading users through the conversation.
 
 ### Prompt Refinement and Rationale
 
-**The root cause:**
+**Why this happened:**
 
-I realized the validation and follow_up prompts were creating an "obsessive robot" that wouldn't let go of any missing field. The validation logic was "if something's missing, you must ask for it", and follow_up reinforced this with "fill all gaps". Together, they made the conversation feel rigid and frustrating.
+I realized the validation and follow_up prompts were creating a robot that wouldn't give up on any missing information. The validation rule was "if something's missing, you must ask for it", and follow_up made this worse by saying "fill all gaps". Together, they made the conversation feel stiff and annoying.
 
-**Overlapping responsibilities:**
+**Doing the same job:**
 
-The bigger issue was that guidance, validation, and follow_up were all doing similar things from different angles. Guidance says "guide users to provide info", validation says "check for gaps and ask", follow_up says "keep asking about the previous topic". The model was getting conflicting instructions - should it follow priority order? Should it ask about every missing field? Should it stick to the current topic? This confusion caused it to get stuck on unimportant questions.
+The bigger problem was that guidance, validation, and follow_up were all trying to do the same thing in different ways. Guidance says "help users give info", validation says "find gaps and ask", follow_up says "keep asking about the same topic". The AI was getting mixed signals - should it follow the priority order? Should it ask about every missing piece? Should it stay on the current topic? This confusion made it get stuck on unimportant questions.
 
-**The fix:**
+**How I fixed it:**
 
-I stripped it down to follow the single responsibility principle. Now only the guidance_prompt handles conversation flow. I also added LOW priority fields with clear "optional" labels (like equipment brand, special requirements), and included few-shot examples showing how to handle "I don't know" responses.
+I simplified the system so each part has one clear job. Now only the guidance prompt controls the conversation flow. I also marked LOW priority fields as "optional" (like equipment brand, special requests), and added examples showing how to handle "I don't know" answers.
 
-The new flow is simpler: **guidance prompt → extract → guidance prompt** (a feedback loop). After extraction, it goes straight to strategy management and response generation, without the extra validation/follow-up layers. 
+The new flow is simpler: **guidance prompt → extract → guidance prompt** (it repeats this cycle). After pulling out information, it goes straight to planning the next question, without the extra validation/follow-up steps. 
 
 ## 6. Iteration 4: Strict Priority Enforcement (Final Version)
 ### Agent Analysis
 
-The language was still too loose - the agent would sometimes ask for multiple things at once, which led to users missing key fields or giving confused responses. Even worse, it would keep re-asking questions that users had already skipped. Occasionally, bookings would fail at the end because some final piece of information didn't meet format requirements.
+The instructions weren't clear enough - the agent would sometimes ask for multiple things at once, which caused users to miss important information or give confusing answers. Even worse, it would keep asking the same questions that users had already skipped. Sometimes bookings would fail at the end because information wasn't in the right format.
 
-The good news is that it was successfully guiding users and collecting high-priority information, and the interactions felt much more friendly and natural.
+The good news is that it was doing well at guiding users and collecting important information, and the conversations felt much friendlier and more natural.
 
 ### Prompt Refinement and Rationale
 
-**Single-item questioning:**
+**Asking one question at a time:**
 
-The biggest change is enforcing one question at a time. When you ask for multiple things in one message, users inevitably miss stuff or get confused. I switched to a state machine approach - ask for one specific field, wait for the answer, then move to the next. This ensures every field gets properly collected.
+The biggest change is making the agent ask only one question at a time. When you ask for multiple things in one message, users will miss stuff or get confused. I changed it to work like this: ask for one specific thing, wait for the answer, then ask for the next thing. This makes sure we collect every piece of information correctly.
 
-**Strict priority enforcement:**
+**Following strict priority order:**
 
-The previous version had priorities (CRITICAL/HIGH/MEDIUM/LOW) but didn't really enforce them. Now there's a STRICT PRIORITY ORDER that the agent must follow. I also expanded from four strategies (A/B/C/D) to six (A/B/C/D/E/F), with each strategy corresponding to a specific priority stage. This way, the agent can identify which priority level is missing data and apply the appropriate strategy.
+The previous version had priorities (CRITICAL/HIGH/MEDIUM/LOW) but didn't really follow them strictly. Now there's a strict order that the agent must follow. I also increased from four conversation strategies (A/B/C/D) to six (A/B/C/D/E/F). Each strategy matches a specific priority level. This way, the agent can figure out which priority level is missing information and use the right strategy for it.
 
-**Smarter skip logic:**
+**Better rules for skipping questions:**
 
-I added explicit rules for skipping LOW priority fields and prohibiting repeated questioning. If a user doesn't know or doesn't want to answer an optional question, the agent can move on instead of getting stuck.
+I added clear rules for skipping LOW priority questions and stopping repeated questions. If a user doesn't know or doesn't want to answer an optional question, the agent can move on instead of getting stuck.
 
 I also cleaned up the guidance prompt output format to ensure proper JSON structure.
 
@@ -385,3 +395,4 @@ Return ONLY a valid JSON object with this structure:
 }"""
 
 ```
+
