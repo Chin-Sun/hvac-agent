@@ -2,6 +2,58 @@
 
 An intelligent conversational agent for HVAC service booking that guides users through a structured information collection process.
 
+## 🚀 Quick Start
+
+### Prerequisites
+- Python 3.8+
+- OpenAI API key ([Get your API key here](https://platform.openai.com/api-keys))
+
+### Installation
+```bash
+# Clone the repository
+git clone https://github.com/Chin-Sun/hvac-agent.git
+cd hvac-agent
+
+# Install dependencies
+pip install -r requirements.txt
+```
+
+### Usage
+```bash
+# Basic usage (requires OPENAI_API_KEY environment variable)
+python cli.py
+
+# With API key
+python cli.py --api-key sk-your-api-key-here
+
+# With specific model
+python cli.py --model gpt-4
+
+# With verbose output
+python cli.py --api-key sk-xxx --model gpt-4 --verbose
+```
+
+## 📁 Project Structure
+
+| File | Description |
+|------|-------------|
+| `cli.py` | Main command-line interface for interacting with the HVAC booking agent |
+| `agent/prompt.py` | **Core prompts** - Contains all conversation strategies and logic |
+| `agent/llm_client.py` | OpenAI API client for LLM interactions |
+| `agent/schema.py` | Data models and validation schemas by using **Pydantic** |
+| `data/samples.jsonl` | Sample conversation data for testing |
+| `diagram.png` | Visual diagram showing the prompt evolution process |
+
+### Key Files Explained
+
+- **`agent/prompt.py`** - This is the heart of the system! Contains all the conversation prompts, strategies, and logic for guiding users through the booking process. Each function defines how the AI should behave in different conversation stages.
+
+- **`cli.py`** - The main entry point. Run this to start an interactive booking session with the AI agent.
+
+- **`agent/llm_client.py`** - Handles communication with OpenAI's API, managing requests and responses.
+
+- **`agent/schema.py`** - Defines the data structure for booking information and validation rules.
+
 ## 1. Sample Conversations
 
 Below are 15 test cases with different customer situations. These cases were used to test how well the agent works.
