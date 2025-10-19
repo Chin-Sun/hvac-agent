@@ -42,18 +42,13 @@ Below are 15 test cases with different customer situations. These cases were use
 ```
 
 ## 2. Initial Prompt and Design Strategy
-I broke down this complex task into three simple steps:
+Based on prompt engineering best practices, I decided to **break down the complex task into smaller, manageable steps**. The system follows a **prompt chaining** approach with three core layers:
 
 **Extraction → Validation → Follow-up**
 
-Here's how it works:
-1. **Extract** - Pull out information from what the user says
-2. **Validate** - Check what's missing by comparing with required fields in `agent/schema.py`
-3. **Follow-up** - Ask for any important information they didn't give us yet
+Here's how it works: first, extract information from user input, then compare it against the required fields in `schema.py` to identify what's missing, and finally ask users for any critical information they haven't provided yet. This process repeats until we have everything we need.
 
-This cycle repeats until we have all the information we need.
-
-To keep things organized, I added clear examples in each function so the AI knows exactly what format to use. Each function has simple "extract" instructions and short descriptions for each required field. The goal is to make the AI have a natural conversation while collecting all the booking information step by step.
+To keep things **clear and structured**, I included specific examples in each function so the LLM knows exactly what output format to produce. Each function has explicit "extract" instructions and uses concise, **descriptive** text for required fields. The goal is to guide the LLM through a natural conversation flow while systematically collecting all necessary booking information.
 
 
 ```python
@@ -233,9 +228,9 @@ The bigger problem was that guidance, validation, and follow_up were all trying 
 
 **How I fixed it:**
 
-I simplified the system so each part has one clear job. Now only the guidance prompt controls the conversation flow. I also marked LOW priority fields as "optional" (like equipment brand, special requests), and added examples showing how to handle "I don't know" answers.
+I stripped it down to follow the single responsibility principle. Now only the guidance_prompt handles conversation flow. I also added LOW priority fields with clear "optional" labels (like equipment brand, special requirements), and included few-shot examples showing how to handle "I don't know" responses.
 
-The new flow is simpler: **guidance prompt → extract → guidance prompt** (it repeats this cycle). After pulling out information, it goes straight to planning the next question, without the extra validation/follow-up steps. 
+The new flow is simpler: **guidance prompt → extract → guidance prompt** (a feedback loop). After extraction, it goes straight to strategy management and response generation, without the extra validation and follow-up layers. 
 
 ## 6. Iteration 4: Strict Priority Enforcement (Final Version)
 ### Agent Analysis
@@ -248,11 +243,11 @@ The good news is that it was doing well at guiding users and collecting importan
 
 **Asking one question at a time:**
 
-The biggest change is making the agent ask only one question at a time. When you ask for multiple things in one message, users will miss stuff or get confused. I changed it to work like this: ask for one specific thing, wait for the answer, then ask for the next thing. This makes sure we collect every piece of information correctly.
+The biggest change is enforcing one question at a time. When you ask for multiple things in one message, users easily miss stuff or get confused. I switched to a state machine approach - ask for one specific field, wait for the answer, then move to the next. This ensures every field gets properly collected.
 
 **Following strict priority order:**
 
-The previous version had priorities (CRITICAL/HIGH/MEDIUM/LOW) but didn't really follow them strictly. Now there's a strict order that the agent must follow. I also increased from four conversation strategies (A/B/C/D) to six (A/B/C/D/E/F). Each strategy matches a specific priority level. This way, the agent can figure out which priority level is missing information and use the right strategy for it.
+The previous version had priorities (CRITICAL/HIGH/MEDIUM/LOW) but didn't really enforce them. Now there's a STRICT PRIORITY ORDER that the agent must follow. I also expanded from four strategies (A/B/C/D) to six (A/B/C/D/E/F), with each strategy corresponding to a specific priority stage. This way, the agent can identify which priority level is missing data and apply the appropriate strategy.
 
 **Better rules for skipping questions:**
 
@@ -265,6 +260,7 @@ I also cleaned up the guidance prompt output format to ensure proper JSON struct
 ![Prompt Evolution Diagram](diagram.png)
 
 ## 8. Final Prompt (Best Result)
+Overall, the entire prompt process follows **Simplicity**, **Structured Output**, **Task Decomposition**, and **Role Definition** principles, using a step-by-step approach with techniques like **Prompt Chaining**, **Few-shot Prompting**, and **Dynamic Context Injection**, etc.
 
 ```python
 # agent/prompt.py
