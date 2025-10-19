@@ -46,52 +46,13 @@ Based on prompt engineering best practices, I decided to **break down the comple
 
 **Extraction → Validation → Follow-up**
 
-Here's how it works: first, extract information from user input, then compare it against the required fields in `schema.py` to identify what's missing, and finally ask users for any critical information they haven't provided yet. This process repeats until we have everything we need.
+Here's how it works: first, extract information from user input, then compare it against the required fields in `agent/schema.py` to identify what's missing, and finally ask users for any critical information they haven't provided yet. This process repeats until we have everything we need.
 
 To keep things **clear and structured**, I included specific examples in each function so the LLM knows exactly what output format to produce. Each function has explicit "extract" instructions and uses concise, **descriptive** text for required fields. The goal is to guide the LLM through a natural conversation flow while systematically collecting all necessary booking information.
 
 
 ```python
 # agent/prompt.py
-def get_llm_system_prompt() -> str:
-    """Get the system prompt for LLM processing"""
-    return """You are a professional HVAC booking agent. Extract booking information from customer conversations and return a structured JSON response.
-
-Extract the following information:
-- Service type (ac_repair, furnace_maintenance, installation, cleaning, ventilation_maintenance, other)
-- Equipment brand if mentioned
-- Problem summary
-- Severity level (critical, high, medium, low)
-- Property type (apartment, detached_house, townhouse, commercial, other)
-- Address details (address, city, province, postal_code)
-- Preferred time slots
-- Access notes and constraints
-- Contact information (name, phone, email)
-- Confidence score (0.0-1.0)
-
-Return ONLY a valid JSON object with this structure:
-{
-  "summary": "Brief summary of the conversation",
-  "booking": {
-    "service_type": "ac_repair",
-    "equipment_brand": null,
-    "problem_summary": "Brief description of the problem",
-    "severity": "medium",
-    "property_type": "apartment",
-    "address": "123 Main St",
-    "city": "Toronto",
-    "province": "ON",
-    "postal_code": null,
-    "preferred_timeslots": ["Tomorrow morning"],
-    "access_notes": null,
-    "contact_name": null,
-    "contact_phone": null,
-    "contact_email": null,
-    "constraints": [],
-    "confidence": 0.85
-  }
-}"""
-
 def get_extraction_prompt() -> str:
     """Get prompt for extracting information from user input"""
     return """You are a professional HVAC booking agent. Extract booking information from the user's request and return a structured JSON response.
